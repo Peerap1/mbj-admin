@@ -1,0 +1,2946 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MBJFOOD</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js';
+        import { getDatabase, ref, push, set, get, remove, onValue, child } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD46Ue81r_tE-KdVUr8TD7tuPBbScX55vc",
+            authDomain: "mbjfood-f708e.firebaseapp.com",
+            databaseURL: "https://mbjfood-f708e-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "mbjfood-f708e",
+            storageBucket: "mbjfood-f708e.firebasestorage.app",
+            messagingSenderId: "266623186120",
+            appId: "1:266623186120:web:1355eb72fb017f3329a1fd",
+            measurementId: "G-B4T6X8GQZ4"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+        window.db = database;
+        window.dbRef = ref;
+        window.dbPush = push;
+        window.dbSet = set;
+        window.dbGet = get;
+        window.dbRemove = remove;
+        window.dbOnValue = onValue;
+        window.dbChild = child;
+
+        window.addEventListener('load', () => {
+            loadCustomers();
+            loadProducts();
+            loadBanks();
+            loadSalesHistory();
+            loadEmployees();
+        });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Kanit', sans-serif; font-size: 20px; }
+        
+        .sidebar-collapsed {
+            width: 80px;
+        }
+        
+        .sidebar-expanded {
+            width: 280px;
+        }
+        
+        .toast {
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out;
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+        }
+        
+        .text-ellipsis {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar-expanded {
+                width: 100%;
+                position: fixed;
+                z-index: 40;
+                height: 100vh;
+            }
+            
+            .sidebar-collapsed {
+                width: 0;
+                overflow: hidden;
+            }
+            
+            .mobile-overlay {
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 30;
+            }
+        }
+        
+        @media print {
+            body * { visibility: hidden; }
+            .print-area, .print-area * { visibility: visible; }
+            .print-area { 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100%; 
+                background: white !important;
+                color: black !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            
+            table { 
+                page-break-inside: auto; 
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin: 0 !important;
+            }
+
+            tr {
+                page-break-inside: avoid !important;
+                page-break-after: auto;
+            }
+
+            thead {
+                display: table-header-group;
+                page-break-after: avoid;
+            }
+
+            tfoot {
+                display: table-footer-group;
+                page-break-before: avoid;
+            }
+
+            tbody tr {
+                page-break-inside: avoid !important;
+            }
+
+            th, td {
+                border: 1px solid #333 !important;
+                padding: 4px !important;
+                font-size: 13px !important;
+                line-height: 1.3 !important;
+            }
+            
+            .bill-header {
+                text-align: center !important;
+                margin: 0 auto 20px auto !important;
+                width: 100% !important;
+                display: block !important;
+                padding-bottom: 15px !important;
+                border-bottom: 2px solid #333 !important;
+            }
+
+            .bill-title {
+                font-size: 24px !important;
+                font-weight: bold !important;
+                margin-bottom: 8px !important;
+            }
+
+            .bill-subtitle {
+                font-size: 14px !important;
+                color: #666 !important;
+                margin-bottom: 4px !important;
+            }
+
+            .bill-info {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 20px !important;
+                margin-bottom: 20px !important;
+                font-size: 12px !important;
+                width: 100% !important;
+            }
+
+            .company-info {
+                order: 1 !important;
+            }
+
+            .customer-info {
+                order: 2 !important;
+            }
+
+            .company-info, .customer-info {
+                padding: 12px !important;
+                border: 1px solid #ddd !important;
+                border-radius: 4px !important;
+                background: #f8f8f8 !important;
+            }
+
+            .info-title {
+                font-weight: bold !important;
+                font-size: 13px !important;
+                margin-bottom: 8px !important;
+                color: #333 !important;
+                padding-bottom: 4px !important;
+                border-bottom: 1px solid #ccc !important;
+            }
+
+            .bill-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin: 0 auto 15px auto !important;
+                max-width: 100% !important;
+                table-layout: fixed !important;
+            }
+
+            .bill-table th {
+                background-color: #f5f5f5 !important;
+                font-weight: bold !important;
+                text-align: center !important;
+                padding: 8px 4px !important;
+                font-size: 13px !important;
+                border: 1px solid #333 !important;
+            }
+
+            .bill-table td {
+                padding: 4px !important;
+                font-size: 13px !important;
+                border: 1px solid #333 !important;
+                vertical-align: top !important;
+            }
+
+            .text-center {
+                text-align: center !important;
+            }
+
+            .text-right {
+                text-align: right !important;
+            }
+
+            .text-left {
+                text-align: left !important;
+            }
+
+            .total-row {
+                background-color: #f0f0f0 !important;
+                font-weight: bold !important;
+            }
+
+            .total-row td {
+                font-size: 14px !important;
+                padding: 8px 4px !important;
+            }
+
+            .page-break {
+                page-break-before: always;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            @page {
+                size: A4;
+                margin: 15mm 15mm 15mm 15mm;
+            }
+
+            #bill-modal {
+                position: static !important;
+                inset: auto !important;
+                z-index: auto !important;
+                background: none !important;
+                padding: 0 !important;
+                max-height: none !important;
+                overflow: visible !important;
+            }
+
+            #bill-modal > div {
+                max-height: none !important;
+                overflow: visible !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+            }
+
+            .flex-1 {
+                overflow: visible !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <!-- Mobile Overlay -->
+    <div id="mobile-overlay" class="mobile-overlay hidden md:hidden"></div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 bg-yellow-500 rounded-full flex items-center justify-center mr-4">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg font-semibold">ยืนยันการดำเนินการ</h3>
+            </div>
+            <p id="confirmation-message" class="text-gray-300 mb-6"></p>
+            <div class="flex gap-3">
+                <button onclick="closeConfirmationModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-lg font-medium transition-colors">
+                    ยกเลิก
+                </button>
+                <button id="confirm-action-btn" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-medium transition-colors">
+                    ยืนยัน
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div id="sidebar" class="sidebar-expanded bg-gray-800 border-r border-gray-700 transition-all duration-300 flex flex-col">
+            <!-- Header -->
+            <div class="p-4 border-b border-gray-700">
+                <div class="flex items-center justify-between">
+                    <div id="logo-text" class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                            <span class="text-xl font-bold">🍚</span>
+                        </div>
+                        <div class="sidebar-text">
+                            <h1 class="text-xl font-bold">MBJFOOD</h1>
+                            <p class="text-xs text-gray-400">ข้าวแต๋นน้ำแตงโม</p>
+                        </div>
+                    </div>
+                    <button onclick="toggleSidebar()" class="p-2 hover:bg-gray-700 rounded-lg transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <nav class="flex-1 p-4">
+                <ul class="space-y-2">
+                    <li>
+                        <button onclick="showSection('sales')" class="nav-item w-full flex items-center space-x-3 p-4 rounded-lg hover:bg-gray-700 transition-colors text-xl" data-section="sales">
+                            <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                            </svg>
+                            <span class="sidebar-text">การขาย</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button onclick="showSection('history')" class="nav-item w-full flex items-center space-x-3 p-4 rounded-lg hover:bg-gray-700 transition-colors text-xl" data-section="history">
+                            <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                            </svg>
+                            <span class="sidebar-text">ประวัติการขาย</span>
+                        </button>
+                    </li>
+                    <li>
+                        <button onclick="toggleDataManagement()" class="nav-item w-full flex items-center space-x-3 p-4 rounded-lg hover:bg-gray-700 transition-colors text-xl justify-between" data-section="data-management">
+                            <div class="flex items-center space-x-3">
+                                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>
+                                </svg>
+                                <span class="sidebar-text">จัดการข้อมูล</span>
+                            </div>
+                            <svg id="data-management-arrow" class="w-4 h-4 ml-auto transition-transform sidebar-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+                        <ul id="data-management-submenu" class="ml-8 mt-2 space-y-1 hidden">
+                            <li>
+                                <button onclick="showSection('customers')" class="nav-item w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-700 transition-colors text-lg" data-section="customers">
+                                    <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                                    </svg>
+                                    <span class="sidebar-text">ลูกค้า</span>
+                                </button>
+                            </li>
+                            <li>
+                                <button onclick="showSection('products')" class="nav-item w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-700 transition-colors text-lg" data-section="products">
+                                    <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                                    </svg>
+                                    <span class="sidebar-text">สินค้า</span>
+                                </button>
+                            </li>
+                            <li>
+                                <button onclick="showSection('banks')" class="nav-item w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-700 transition-colors text-lg" data-section="banks">
+                                    <svg class="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                                    </svg>
+                                    <span class="sidebar-text">ธนาคาร</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </li>
+                    <li>
+                        <button onclick="showSection('reports')" class="nav-item w-full flex items-center space-x-3 p-4 rounded-lg hover:bg-gray-700 transition-colors text-xl" data-section="reports">
+                            <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                            <span class="sidebar-text">รายงาน</span>
+                        </button>
+                    </li>
+                    <!-- Hide Menu Employee -->
+                    <!-- <li>
+                        <button onclick="togglePayrollManagement()" class="nav-item w-full flex items-center space-x-3 p-4 rounded-lg hover:bg-gray-700 transition-colors text-xl justify-between" data-section="payroll-management">
+                            <div class="flex items-center space-x-3">
+                                <svg class="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a2.25 2.25 0 0 0-2.25-2.25H15a3 3 0 1 1-6 0H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9m18 0V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v3"></path>
+                                </svg>
+                                <span class="sidebar-text">พนักงาน</span>
+                            </div>
+                            <svg id="payroll-management-arrow" class="w-4 h-4 ml-auto transition-transform sidebar-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+                        <ul id="payroll-management-submenu" class="ml-8 mt-2 space-y-1 hidden">
+                            <li>
+                                <button onclick="showSection('employees')" class="nav-item w-full flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-700 transition-colors text-lg" data-section="employees">
+                                    <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                                    </svg>
+                                    <span class="sidebar-text">พนักงาน</span>
+                                </button>
+                            </li>
+                        </ul>
+                    </li> -->
+                </ul>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Top Bar -->
+            <div class="bg-gray-800 border-b border-gray-700 p-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <button onclick="toggleSidebar()" class="md:hidden p-2 hover:bg-gray-700 rounded-lg transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                            </svg>
+                        </button>
+                        <h2 id="page-title" class="text-3xl font-semibold">ประวัติการขาย</h2>
+                    </div>
+                    <div class="text-sm text-gray-400 hidden sm:block">
+                        <span id="current-time"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="flex-1 overflow-auto p-4 md:p-6">
+                <!-- Customers Section -->
+                <div id="customers-section" class="section hidden">
+                    <div class="mb-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                            <h3 class="text-2xl font-semibold">รายชื่อลูกค้า</h3>
+                            <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                                <input type="text" id="customer-search" placeholder="ค้นหาลูกค้า..." class="px-5 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-xl" oninput="searchCustomers()">
+                                <button onclick="openAddCustomerModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 justify-center text-xl">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                    </svg>
+                                    เพิ่มลูกค้า
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-800 rounded-lg overflow-hidden overflow-x-auto">
+                            <table class="w-full min-w-full">
+                                <thead class="bg-gray-700">
+                                    <tr>
+                                        <th class="px-4 md:px-6 py-4 text-left text-base font-medium text-gray-300 uppercase tracking-wider">ชื่อลูกค้า</th>
+                                        <th class="px-4 md:px-6 py-4 text-left text-base font-medium text-gray-300 uppercase tracking-wider">ที่อยู่</th>
+                                        <th class="px-4 md:px-6 py-4 text-left text-base font-medium text-gray-300 uppercase tracking-wider">เบอร์โทร</th>
+                                        <th class="px-4 md:px-6 py-4 text-left text-base font-medium text-gray-300 uppercase tracking-wider">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="customers-table" class="bg-gray-800 divide-y divide-gray-700 text-lg">
+                                    <!-- Customer rows will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="customers-pagination" class="mt-4 mb-4 flex justify-end items-center gap-2"></div>
+                    </div>
+                </div>
+
+                <!-- Banks Section -->
+                <div id="banks-section" class="section hidden">
+                    <div class="mb-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                            <h3 class="text-2xl font-semibold">รายการธนาคาร</h3>
+                            <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                                <input type="text" id="bank-search" placeholder="ค้นหาธนาคาร..." class="px-5 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-xl" oninput="searchBanks()">
+                                <button onclick="openAddBankModal()" class="bg-yellow-600 hover:bg-yellow-700 text-white px-5 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 justify-center text-xl">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                    </svg>
+                                    เพิ่มธนาคาร
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-800 rounded-lg overflow-hidden overflow-x-auto">
+                            <table class="w-full min-w-full">
+                                <thead class="bg-gray-700">
+                                    <tr>
+                                        <th class="px-4 md:px-6 py-4 text-left text-base font-medium text-gray-300 uppercase tracking-wider">ชื่อธนาคาร</th>
+                                        <th class="px-4 md:px-6 py-4 text-left text-base font-medium text-gray-300 uppercase tracking-wider">เลขที่บัญชี</th>
+                                        <th class="px-4 md:px-6 py-4 text-left text-base font-medium text-gray-300 uppercase tracking-wider">ชื่อบัญชี</th>
+                                        <th class="px-4 md:px-6 py-4 text-left text-base font-medium text-gray-300 uppercase tracking-wider">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="banks-table" class="bg-gray-800 divide-y divide-gray-700 text-lg">
+                                    <!-- Bank rows will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Products Section -->
+                <div id="products-section" class="section hidden">
+                    <div class="mb-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                            <h3 class="text-2xl font-semibold">รายการสินค้า</h3>
+                            <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                                <input type="text" id="product-search" placeholder="ค้นหาสินค้า..." class="px-5 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-xl" oninput="searchProducts()">
+                                <button onclick="openAddProductModal()" class="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 justify-center text-xl">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                    </svg>
+                                    เพิ่มสินค้า
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-800 rounded-lg overflow-hidden overflow-x-auto">
+                            <table class="w-full min-w-full">
+                                <thead class="bg-gray-700">
+                                    <tr>
+                                        <th class="px-4 md:px-6 py-4 text-left text-base font-medium text-gray-300 uppercase tracking-wider">ชื่อสินค้า</th>
+                                        <th class="px-4 md:px-6 py-4 text-left text-base font-medium text-gray-300 uppercase tracking-wider">ราคา</th>
+                                        <th class="px-4 md:px-6 py-4 text-left text-base font-medium text-gray-300 uppercase tracking-wider">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="products-table" class="bg-gray-800 divide-y divide-gray-700 text-lg">
+                                    <!-- Product rows will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="products-pagination" class="mt-4 mb-4 flex justify-end items-center gap-2"></div>
+                    </div>
+                </div>
+
+                <!-- Sales Section -->
+                <div id="sales-section" class="section hidden">
+                    <div class="grid lg:grid-cols-2 gap-6">
+                        <div class="bg-gray-800 rounded-lg p-6">
+                            <h3 class="text-lg font-semibold mb-4">สร้างรายการใหม่</h3>
+                            <div class="space-y-4">
+                                <!-- เพิ่มช่องค้นหาสินค้า -->
+                                <input type="text" id="box-product-search" placeholder="ค้นหาสินค้า..." class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-lg mb-3" oninput="filterBoxProducts()">
+                                <div id="box-products" class="space-y-3" style="max-height: 600px; overflow-y: auto;">
+                                    <!-- Product selection will be added here -->
+                                </div>
+                                <div class="flex gap-3">
+                                    <input type="number" id="box-count" placeholder="จำนวนกล่อง" min="1" value="1" class="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-lg">
+                                    <button onclick="addBoxToOrder()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors text-lg">
+                                        เพิ่มรายการ
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-6">
+                            <div class="bg-gray-800 rounded-lg p-6">
+                                <h3 class="text-lg font-semibold mb-4">เลือกลูกค้า <span class="text-red-400">*</span></h3>
+                                <div class="relative mb-4">
+                                    <button id="open-customer-dropdown" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white text-left focus:outline-none focus:border-blue-500 text-lg flex items-center justify-between" onclick="toggleCustomerDropdown()">
+                                        <span id="selected-customer-name">เลือกลูกค้า</span>
+                                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                        </svg>
+                                    </button>
+                                    <div id="customer-dropdown-panel" class="absolute left-0 w-full bg-gray-900 border border-gray-600 rounded-lg shadow-lg mt-2 z-20 hidden">
+                                        <input type="text" id="sale-customer-search"
+                                            placeholder="ค้นหาลูกค้า..."
+                                            class="w-full px-4 py-3 bg-gray-900 border-b border-gray-600 rounded-t-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-lg"
+                                            oninput="filterSaleCustomerDropdown()">
+                                        <div id="customer-dropdown-list" style="max-height: 300px; overflow-y: auto;">
+                                            <!-- รายชื่อลูกค้าจะถูกเติมโดย JS -->
+                                        </div>
+                                    </div>
+                                    <input type="hidden" id="sale-customer" value="">
+                                </div>
+                                
+                                <h3 class="text-lg font-semibold mb-4">เลือกค่าจัดส่ง <span class="text-red-400">*</span></h3>
+                                <select id="shipping-option" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500 text-lg" onchange="updateShippingCost()">
+                                    <option value="">เลือกค่าจัดส่ง</option>
+                                    <option value="free">ส่งฟรี</option>
+                                    <option value="by-box">ตามจำนวนกล่อง</option>
+                                    <option value="custom">กำหนดค่าจัดส่ง</option>
+                                </select>
+                                
+                                <div id="custom-shipping" class="mt-4 hidden">
+                                    <input type="number" id="custom-shipping-cost" placeholder="ค่าจัดส่ง (บาท)" min="0" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-lg" oninput="updateShippingCost()">
+                                </div>
+                            </div>
+
+                            <div class="bg-gray-800 rounded-lg p-7">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="text-lg font-semibold">คำสั่งซื้อปัจจุบัน</h3>
+                                    <button onclick="showConfirmation('ต้องการล้างคำสั่งซื้อทั้งหมดหรือไม่?', clearOrderConfirmed)" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                                        ล้างคำสั่งซื้อ
+                                    </button>
+                                </div>
+                                <div id="current-order" class="space-y-3 mb-6 max-h-64 overflow-y-auto">
+                                    <!-- Current order items will be shown here -->
+                                </div>
+                                <div class="border-t border-gray-700 pt-4">
+                                    <div class="space-y-2 mb-4">
+                                        <div class="flex justify-between text-base">
+                                            <span>รวมราคาสินค้า</span>
+                                            <span id="subtotal-amount" class="text-white">0 บาท</span>
+                                        </div>
+                                        <div class="flex justify-between text-base">
+                                            <span></span>
+                                            <span id="shipping-amount" class="text-white">0 บาท</span>
+                                        </div>
+                                        <div class="flex justify-between text-xl font-semibold border-t border-gray-600 pt-2">
+                                            <span>รวมเป็นเงินทั้งสิ้น</span>
+                                            <span id="total-amount" class="text-green-400">0 บาท</span>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-3">
+                                        <button onclick="saveBill()" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 text-lg">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                                            </svg>
+                                            บันทึกบิล
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History Section -->
+                <div id="history-section" class="section">
+                    <div class="mb-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                            <h3 class="text-2xl font-semibold">ประวัติการขาย</h3>
+                            <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                                <input type="text" id="history-search" placeholder="เลขที่คำสั่งซื้อ, ชื่อลูกค้า" class="px-5 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-sm" oninput="searchSalesHistory()">
+                                    <select id="history-status-filter" class="px-5 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white text-sm" onchange="searchSalesHistory()">
+                                        <option value="">ทุกสถานะ</option>
+                                        <option value="paid">ชำระเงินแล้ว</option>
+                                        <option value="unpaid">ยังไม่ชำระเงิน</option>
+                                    </select>
+                                <button onclick="toggleDateFilter()" class="bg-purple-600 hover:bg-purple-700 text-white px-5 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 justify-center text-xl">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                    กรองวันที่
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Date Filter Panel -->
+                        <div id="date-filter-panel" class="bg-gray-700 rounded-lg p-4 mb-4 hidden">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                                <div class="flex items-center gap-4">
+                                    <label class="whitespace-nowrap block text-sm font-medium text-gray-300">วันที่เริ่มต้น</label>
+                                    <input type="date" id="start-date" class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500 text-lg" onchange="searchSalesHistory()">
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <label class="whitespace-nowrap block text-sm font-medium text-gray-300">วันที่สิ้นสุด</label>
+                                    <input type="date" id="end-date" class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500 text-lg" onchange="searchSalesHistory()">
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="clearDateFilter()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-lg">
+                                        ล้างตัวกรอง
+                                    </button>
+                                    <button onclick="setQuickDateFilter('today')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-lg">
+                                        วันนี้
+                                    </button>
+                                    <button onclick="setQuickDateFilter('month')" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-lg">
+                                        เดือนนี้
+                                    </button>
+                                    <button onclick="setQuickDateFilter('year')" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-lg">
+                                        ปีนี้
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-gray-800 rounded-lg overflow-hidden overflow-x-auto">
+                            <table class="w-full min-w-full">
+                                <thead class="bg-gray-700">
+                                    <tr>
+                                        <th class="px-4 md:px-6 py-4 text-left text-base font-medium text-gray-300 uppercase tracking-wider">ลูกค้า</th>
+                                        <th class="px-4 md:px-6 py-4 text-left text-base font-medium text-gray-300 uppercase tracking-wider">วันที่</th>
+                                        <th class="px-4 md:px-6 py-4 text-left text-base font-medium text-gray-300 uppercase tracking-wider">ยอดรวม</th>
+                                        <th class="px-4 md:px-6 py-4 text-left text-base font-medium text-gray-300 uppercase tracking-wider">สถานะ</th>
+                                        <th class="px-4 md:px-6 py-4 text-left text-base font-medium text-gray-300 uppercase tracking-wider">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sales-history-table" class="bg-gray-800 divide-y divide-gray-700 text-lg">
+                                    <!-- Sales history rows will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="sales-history-pagination" class="mt-4 mb-4 flex justify-end items-center gap-2"></div>
+                    </div>
+                </div>
+
+                <!-- Reports Section -->
+                <div id="reports-section" class="section hidden">
+                    <!-- Date Filter Panel for Reports -->
+                    <div id="report-date-filter-panel" class="bg-gray-700 rounded-lg p-4 mb-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                            <div class="flex items-center gap-4">
+                                <label class="whitespace-nowrap block text-sm font-medium text-gray-300">วันที่เริ่มต้น</label>
+                                <input type="date" id="report-start-date" class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500 text-lg" onchange="generateReport('custom')">
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <label class="whitespace-nowrap block text-sm font-medium text-gray-300">วันที่สิ้นสุด</label>
+                                <input type="date" id="report-end-date" class="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500 text-lg" onchange="generateReport('custom')">
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="clearReportDateFilter()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-lg">
+                                    ล้างตัวกรอง
+                                </button>
+                                <button onclick="setQuickReportDateFilter('today')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-lg">
+                                    วันนี้
+                                </button>
+                                <button onclick="setQuickReportDateFilter('month')" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-lg">
+                                    เดือนนี้
+                                </button>
+                                <button onclick="setQuickReportDateFilter('year')" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white px-4 py-3 rounded-lg font-medium transition-colors text-lg">
+                                    ปีนี้
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="report-summary-total" class="mb-4">
+                        <!-- สรุปยอดขายทั้งหมดจะแสดงตรงนี้ -->
+                    </div>
+                    <div id="report-content" class="bg-gray-800 rounded-lg p-6 mb-4">
+                        <p class="text-center text-gray-400">เลือกช่วงวันที่ที่ต้องการดูรายงาน</p>
+                    </div>
+                </div>
+                
+                <!-- Employee Section -->
+                <div id="employees-section" class="section hidden">
+                    <div class="mb-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                            <h3 class="text-2xl font-semibold">รายชื่อพนักงาน</h3>
+                            <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                                <input type="text" id="employee-search" placeholder="ค้นหาพนักงาน..." class="px-5 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-xl" oninput="searchEmployees()">
+                                <button onclick="openAddEmployeeModal()" class="bg-pink-600 hover:bg-pink-700 text-white px-5 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 justify-center text-xl">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                    </svg>
+                                    เพิ่มพนักงาน
+                                </button>
+                            </div>
+                        </div>
+                <div class="bg-gray-800 rounded-lg overflow-hidden overflow-x-auto">
+                    <table class="w-full min-w-full">
+                        <thead class="bg-gray-700">
+                            <tr>
+                                <th class="px-4 md:px-6 py-4 text-left text-base font-medium text-gray-300 uppercase tracking-wider">ชื่อพนักงาน</th>
+                                <th class="px-4 md:px-6 py-4 text-left text-base font-medium text-gray-300 uppercase tracking-wider">ราคาต่อชั่วโมง</th>
+                                <th class="px-4 md:px-6 py-4 text-left text-base font-medium text-gray-300 uppercase tracking-wider">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employees-table" class="bg-gray-800 divide-y divide-gray-700 text-lg">
+                            <!-- Employee rows will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Customer Modal -->
+    <div id="add-customer-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">เพิ่มลูกค้าใหม่</h3>
+                <button onclick="closeAddCustomerModal()" class="text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <input type="text" id="modal-customer-name" placeholder="ชื่อลูกค้า" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-lg">
+                <textarea id="modal-customer-address" placeholder="ที่อยู่" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 h-24 resize-none text-base"></textarea>
+                <input type="text" id="modal-customer-phone" placeholder="เบอร์โทร" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-base">
+                <div class="flex gap-3">
+                    <button onclick="closeAddCustomerModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-lg font-medium transition-colors text-base">
+                        ยกเลิก
+                    </button>
+                    <button onclick="addCustomer()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors text-base">
+                        เพิ่มลูกค้า
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Customer Modal -->
+    <div id="edit-customer-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">แก้ไขข้อมูลลูกค้า</h3>
+                <button onclick="closeEditCustomerModal()" class="text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <input type="text" id="edit-customer-name" placeholder="ชื่อลูกค้า" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-base">
+                <textarea id="edit-customer-address" placeholder="ที่อยู่" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 h-24 resize-none text-base"></textarea>
+                <input type="text" id="edit-customer-phone" placeholder="เบอร์โทร" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-base">
+                <div class="flex gap-3">
+                    <button onclick="closeEditCustomerModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-lg font-medium transition-colors text-base">
+                        ยกเลิก
+                    </button>
+                    <button onclick="updateCustomer()" class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white py-3 rounded-lg font-medium transition-colors text-base">
+                        บันทึก
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Product Modal -->
+    <div id="add-product-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">เพิ่มสินค้าใหม่</h3>
+                <button onclick="closeAddProductModal()" class="text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <input type="text" id="modal-product-name" placeholder="ชื่อสินค้า" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-base">
+                <input type="number" id="modal-product-price" placeholder="ราคา (บาท)" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-base">
+                <div class="flex gap-3">
+                    <button onclick="closeAddProductModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-lg font-medium transition-colors text-base">
+                        ยกเลิก
+                    </button>
+                    <button onclick="addProduct()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium transition-colors text-base">
+                        เพิ่มสินค้า
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Bank Modal -->
+    <div id="add-bank-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">เพิ่มธนาคารใหม่</h3>
+                <button onclick="closeAddBankModal()" class="text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <input type="text" id="modal-bank-name" placeholder="ชื่อธนาคาร" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-base">
+                <input type="text" id="modal-bank-account" placeholder="เลขที่บัญชี" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-base">
+                <input type="text" id="modal-bank-holder" placeholder="ชื่อบัญชี" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-base">
+                <div class="flex gap-3">
+                    <button onclick="closeAddBankModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-lg font-medium transition-colors text-base">
+                        ยกเลิก
+                    </button>
+                    <button onclick="addBank()" class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white py-3 rounded-lg font-medium transition-colors text-base">
+                        เพิ่มธนาคาร
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Bank Modal -->
+    <div id="edit-bank-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">แก้ไขข้อมูลธนาคาร</h3>
+                <button onclick="closeEditBankModal()" class="text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <input type="text" id="edit-bank-name" placeholder="ชื่อธนาคาร" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-base">
+                <input type="text" id="edit-bank-account" placeholder="เลขที่บัญชี" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-base">
+                <input type="text" id="edit-bank-holder" placeholder="ชื่อบัญชี" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-base">
+                <div class="flex gap-3">
+                    <button onclick="closeEditBankModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-lg font-medium transition-colors text-base">
+                        ยกเลิก
+                    </button>
+                    <button onclick="updateBank()" class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white py-3 rounded-lg font-medium transition-colors text-base">
+                        บันทึก
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Product Modal -->
+    <div id="edit-product-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">แก้ไขข้อมูลสินค้า</h3>
+                <button onclick="closeEditProductModal()" class="text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <input type="text" id="edit-product-name" placeholder="ชื่อสินค้า" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-base">
+                <input type="number" id="edit-product-price" placeholder="ราคา (บาท)" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-base">
+                <div class="flex gap-3">
+                    <button onclick="closeEditProductModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-lg font-medium transition-colors text-base">
+                        ยกเลิก
+                    </button>
+                    <button onclick="updateProduct()" class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white py-3 rounded-lg font-medium transition-colors text-base">
+                        บันทึก
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="payment-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">ชำระเงิน</h3>
+                <button onclick="closePaymentModal()" class="text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">วิธีการชำระเงิน</label>
+                    <select id="payment-method" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500 text-base" onchange="toggleBankSelection()">
+                        <option value="">เลือกวิธีการชำระเงิน</option>
+                        <option value="cash">เงินสด</option>
+                        <option value="transfer">โอนผ่านธนาคาร</option>
+                    </select>
+                </div>
+                
+                <div id="bank-selection" class="hidden">
+                    <label class="block text-sm font-medium text-gray-300 mb-2">เลือกธนาคาร</label>
+                    <select id="payment-bank" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500 text-base">
+                        <option value="">เลือกธนาคาร</option>
+                    </select>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button onclick="closePaymentModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-lg font-medium transition-colors text-base">
+                        ยกเลิก
+                    </button>
+                    <button onclick="confirmPayment()" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-medium transition-colors text-base">
+                        ยืนยันการชำระเงิน
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Bill Modal -->
+    <div id="bill-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden flex flex-col">
+            <!-- Modal Header -->
+            <div class="bg-blue-600 text-white p-6 no-print shadow-lg">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-white bg-opacity-20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                            <span class="text-2xl">📋</span>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold">ใบส่งของ</h3>
+                            <p class="text-sm text-white/80">ข้าวแต๋นน้ำแตงโมแม่บัวจันทร์</p>
+                        </div>
+                    </div>
+                    <button onclick="closeBillModal()" class="text-white hover:text-gray-200 transition-colors p-2 hover:bg-white/10 rounded-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Bill Content Area -->
+            <div class="flex-1 overflow-y-auto bg-white">
+                <div class="print-area max-w-4xl mx-auto bg-white">
+                    <div id="bill-content">
+                        <!-- Bill content will be generated here -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="bg-gray-100 border-t border-gray-200 p-6 no-print">
+                <div class="flex gap-4 max-w-4xl mx-auto">
+                    <button onclick="window.print()" class="flex-1 bg-green-600 hover:bg-green-700 text-white p-4 rounded-xl font-semibold transition-all duration-200 text-base flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                        </svg>
+                        พิมพ์บิล
+                    </button>
+                    <button onclick="closeBillModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white p-4 rounded-xl font-semibold transition-all duration-200 text-base flex items-center justify-center gap-3 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                        ปิด
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Modal สำหรับเพิ่ม/แก้ไขพนักงาน -->
+    <div id="add-employee-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">เพิ่มพนักงานใหม่</h3>
+                <button onclick="closeAddEmployeeModal()" class="text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <input type="text" id="modal-employee-name" placeholder="ชื่อพนักงาน" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-lg">
+                <input type="number" id="modal-employee-rate" placeholder="ราคาต่อชั่วโมง" min="0" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-lg">
+                <div class="flex gap-3">
+                    <button onclick="closeAddEmployeeModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-lg font-medium transition-colors text-base">
+                        ยกเลิก
+                    </button>
+                    <button onclick="addEmployee()" class="flex-1 bg-pink-600 hover:bg-pink-700 text-white py-3 rounded-lg font-medium transition-colors text-base">
+                        เพิ่มพนักงาน
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="edit-employee-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-gray-800 rounded-lg p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">แก้ไขข้อมูลพนักงาน</h3>
+                <button onclick="closeEditEmployeeModal()" class="text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <input type="text" id="edit-employee-name" placeholder="ชื่อพนักงาน" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-base">
+                <input type="number" id="edit-employee-rate" placeholder="ราคาต่อชั่วโมง" min="0" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 text-base">
+                <div class="flex gap-3">
+                    <button onclick="closeEditEmployeeModal()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-lg font-medium transition-colors text-base">
+                        ยกเลิก
+                    </button>
+                    <button onclick="updateEmployee()" class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white py-3 rounded-lg font-medium transition-colors text-base">
+                        บันทึก
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        let currentOrder = [];
+        let customers = {};
+        let products = {};
+        let banks = {};
+        let salesHistory = {};
+        let currentEditCustomerId = null;
+        let currentEditProductId = null;
+        let currentEditBankId = null;
+        let confirmationCallback = null;
+        let currentShippingCost = 0;
+        let currentPaymentSaleId = null;
+        let currentPage = 1;
+        const pageSize = 10;
+
+        function renderPagination({
+            containerId,
+            totalItems,
+            currentPage,
+            pageSize,
+            onPageChange
+        }) {
+            const paginationDiv = document.getElementById(containerId);
+            const totalPages = Math.ceil(totalItems / pageSize);
+            paginationDiv.innerHTML = '';
+            paginationDiv.className = 'mt-4 flex justify-end items-center gap-2';
+        
+            if (totalPages <= 1) return;
+        
+            // Previous button
+            const prevBtn = document.createElement('button');
+            prevBtn.innerHTML = '«';
+            prevBtn.className = `px-3 py-1 rounded-full ${currentPage === 1 ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-700 text-white hover:bg-blue-600'}`;
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.onclick = () => {
+                if (currentPage > 1) onPageChange(currentPage - 1);
+            };
+            paginationDiv.appendChild(prevBtn);
+        
+            // Page numbers (compact)
+            let pages = [];
+            if (totalPages <= 5) {
+                for (let i = 1; i <= totalPages; i++) pages.push(i);
+            } else {
+                if (currentPage <= 3) {
+                    pages = [1, 2, 3, '...', totalPages];
+                } else if (currentPage >= totalPages - 2) {
+                    pages = [1, '...', totalPages - 2, totalPages - 1, totalPages];
+                } else {
+                    pages = [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
+                }
+            }
+        
+            pages.forEach(p => {
+                if (p === '...') {
+                    const dots = document.createElement('span');
+                    dots.textContent = '...';
+                    dots.className = 'mx-1 text-gray-400';
+                    paginationDiv.appendChild(dots);
+                } else {
+                    const btn = document.createElement('button');
+                    btn.textContent = p;
+                    btn.className = `px-3 py-1 rounded-full mx-1 ${p === currentPage ? 'bg-blue-600 text-white font-bold' : 'bg-gray-700 text-white hover:bg-blue-500'}`;
+                    btn.onclick = () => onPageChange(p);
+                    paginationDiv.appendChild(btn);
+                }
+            });
+        
+            // Next button
+            const nextBtn = document.createElement('button');
+            nextBtn.innerHTML = '»';
+            nextBtn.className = `px-3 py-1 rounded-full ${currentPage === totalPages ? 'bg-gray-700 text-gray-400 cursor-not-allowed' : 'bg-gray-700 text-white hover:bg-blue-600'}`;
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.onclick = () => {
+                if (currentPage < totalPages) onPageChange(currentPage + 1);
+            };
+            paginationDiv.appendChild(nextBtn);
+        }
+
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        // Toast Notification System
+        function showToast(message, type = 'success') {
+            const toastContainer = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const bgColor = type === 'success' ? 'bg-green-600' : 
+                           type === 'error' ? 'bg-red-600' : 
+                           type === 'warning' ? 'bg-yellow-600' : 'bg-blue-600';
+            
+            toast.className = `toast ${bgColor} text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 max-w-sm`;
+            
+            const icon = type === 'success' ? '✅' : 
+                        type === 'error' ? '❌' : 
+                        type === 'warning' ? '⚠️' : 'ℹ️';
+            
+            toast.innerHTML = `
+                <span class="text-lg">${icon}</span>
+                <span class="flex-1">${message}</span>
+                <button onclick="this.parentElement.remove()" class="text-white hover:text-gray-200">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Show toast
+            setTimeout(() => toast.classList.add('show'), 100);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        // Shipping Cost Management
+        function updateShippingCost() {
+            const shippingOption = document.getElementById('shipping-option').value;
+            const customShippingDiv = document.getElementById('custom-shipping');
+            
+            if (shippingOption === 'custom') {
+                customShippingDiv.classList.remove('hidden');
+            } else {
+                customShippingDiv.classList.add('hidden');
+            }
+            
+            calculateShippingCost();
+            displayCurrentOrder();
+        }
+
+        function calculateShippingCost() {
+            const shippingOption = document.getElementById('shipping-option').value;
+            let totalBoxes = 0;
+            
+            currentOrder.forEach(box => {
+                totalBoxes += box.boxCount;
+            });
+
+            switch (shippingOption) {
+                case '':
+                    currentShippingCost = 0;
+                    break;
+                case 'free':
+                    currentShippingCost = 0;
+                    break;
+                case 'by-box':
+                    if (totalBoxes >= 10) {
+                        currentShippingCost = 0; // ส่งฟรีเมื่อ 10 กล่องขึ้นไป
+                    } else if (totalBoxes >= 5) {
+                        currentShippingCost = totalBoxes * 100; // 5-9 กล่อง = 100 บาท/กล่อง
+                    } else if (totalBoxes >= 3) {
+                        currentShippingCost = totalBoxes * 120; // 3-4 กล่อง = 120 บาท/กล่อง
+                    } else if (totalBoxes >= 1) {
+                        currentShippingCost = totalBoxes * 150; // 1-2 กล่อง = 150 บาท/กล่อง
+                    } else {
+                        currentShippingCost = 0;
+                    }
+                    break;
+                case 'custom':
+                    const customCost = parseFloat(document.getElementById('custom-shipping-cost').value) || 0;
+                    currentShippingCost = customCost;
+                    break;
+                default:
+                    currentShippingCost = 0;
+            }
+        }
+
+        // Confirmation Modal
+        function showConfirmation(message, callback) {
+            document.getElementById('confirmation-message').textContent = message;
+            confirmationCallback = callback;
+            document.getElementById('confirmation-modal').classList.remove('hidden');
+            document.getElementById('confirmation-modal').classList.add('flex');
+        }
+
+        function closeConfirmationModal() {
+            document.getElementById('confirmation-modal').classList.add('hidden');
+            document.getElementById('confirmation-modal').classList.remove('flex');
+            confirmationCallback = null;
+        }
+
+        document.getElementById('confirm-action-btn').onclick = function() {
+            if (confirmationCallback) {
+                confirmationCallback();
+            }
+            closeConfirmationModal();
+        };
+
+        // Sidebar Toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const sidebarTexts = document.querySelectorAll('.sidebar-text');
+            const overlay = document.getElementById('mobile-overlay');
+            
+            if (window.innerWidth < 768) {
+                // Mobile behavior
+                if (sidebar.classList.contains('sidebar-collapsed')) {
+                    sidebar.classList.remove('sidebar-collapsed');
+                    sidebar.classList.add('sidebar-expanded');
+                    overlay.classList.remove('hidden');
+                    sidebarTexts.forEach(text => text.style.display = 'block');
+                } else {
+                    sidebar.classList.remove('sidebar-expanded');
+                    sidebar.classList.add('sidebar-collapsed');
+                    overlay.classList.add('hidden');
+                    sidebarTexts.forEach(text => text.style.display = 'none');
+                }
+            } else {
+                // Desktop behavior
+                if (sidebar.classList.contains('sidebar-expanded')) {
+                    sidebar.classList.remove('sidebar-expanded');
+                    sidebar.classList.add('sidebar-collapsed');
+                    sidebarTexts.forEach(text => text.style.display = 'none');
+                } else {
+                    sidebar.classList.remove('sidebar-collapsed');
+                    sidebar.classList.add('sidebar-expanded');
+                    sidebarTexts.forEach(text => text.style.display = 'block');
+                }
+            }
+        }
+
+        // Close sidebar when clicking overlay
+        document.getElementById('mobile-overlay').onclick = function() {
+            toggleSidebar();
+        };
+
+        // Data Management Submenu Toggle
+        function toggleDataManagement() {
+            const submenu = document.getElementById('data-management-submenu');
+            const arrow = document.getElementById('data-management-arrow');
+            
+            if (submenu.classList.contains('hidden')) {
+                submenu.classList.remove('hidden');
+                arrow.style.transform = 'rotate(90deg)';
+            } else {
+                submenu.classList.add('hidden');
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        // Navigation
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionName + '-section').classList.remove('hidden');
+            
+            // Update active nav item
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('bg-gray-700');
+            });
+            document.querySelector(`[data-section="${sectionName}"]`).classList.add('bg-gray-700');
+            
+            // Open data management submenu if accessing its child sections
+            if (['customers', 'products', 'banks'].includes(sectionName)) {
+                const submenu = document.getElementById('data-management-submenu');
+                const arrow = document.getElementById('data-management-arrow');
+                submenu.classList.remove('hidden');
+                arrow.style.transform = 'rotate(90deg)';
+            }
+            if (sectionName === 'employees') {
+            loadEmployees();
+            }
+    
+            // Update page title
+            const titles = {
+                customers: 'ลูกค้า',
+                products: 'สินค้า',
+                banks: 'ธนาคาร',
+                sales: 'การขาย',
+                history: 'ประวัติการขาย',
+                reports: 'รายงาน',
+                employees: 'พนักงาน'
+            };
+            document.getElementById('page-title').textContent = titles[sectionName];
+            
+            if (sectionName === 'sales') {
+                loadCustomersForSale();
+                loadProductsForBox();
+            }
+
+            // Close sidebar on mobile after selection
+            if (window.innerWidth < 768) {
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar.classList.contains('sidebar-expanded')) {
+                    toggleSidebar();
+                }
+            }
+
+                if (sectionName === 'reports') {
+                displayTotalSalesSummary();
+            }
+        }
+
+        // Customer Management
+        function openAddCustomerModal() {
+            document.getElementById('add-customer-modal').classList.remove('hidden');
+            document.getElementById('add-customer-modal').classList.add('flex');
+            document.getElementById('modal-customer-name').focus();
+        }
+
+        function closeAddCustomerModal() {
+            document.getElementById('add-customer-modal').classList.add('hidden');
+            document.getElementById('add-customer-modal').classList.remove('flex');
+            document.getElementById('modal-customer-name').value = '';
+            document.getElementById('modal-customer-address').value = '';
+            document.getElementById('modal-customer-phone').value = '';
+        }
+
+        async function addCustomer() {
+            const name = document.getElementById('modal-customer-name').value.trim();
+            const address = document.getElementById('modal-customer-address').value.trim();
+            const phone = document.getElementById('modal-customer-phone').value.trim();
+
+            if (!name || !address || !phone) {
+                showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+                return;
+            }
+
+            try {
+                const customersRef = window.dbRef(window.db, 'customers');
+                await window.dbPush(customersRef, { name, address, phone });
+                
+                closeAddCustomerModal();
+                showToast('เพิ่มลูกค้าเรียบร้อยแล้ว', 'success');
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        function openEditCustomerModal(id) {
+            currentEditCustomerId = id;
+            const customer = customers[id];
+            
+            document.getElementById('edit-customer-name').value = customer.name;
+            document.getElementById('edit-customer-address').value = customer.address;
+            document.getElementById('edit-customer-phone').value = customer.phone;
+            
+            document.getElementById('edit-customer-modal').classList.remove('hidden');
+            document.getElementById('edit-customer-modal').classList.add('flex');
+        }
+
+        function closeEditCustomerModal() {
+            document.getElementById('edit-customer-modal').classList.add('hidden');
+            document.getElementById('edit-customer-modal').classList.remove('flex');
+            currentEditCustomerId = null;
+        }
+
+        async function updateCustomer() {
+            if (!currentEditCustomerId) return;
+            
+            const name = document.getElementById('edit-customer-name').value.trim();
+            const address = document.getElementById('edit-customer-address').value.trim();
+            const phone = document.getElementById('edit-customer-phone').value.trim();
+
+            if (!name || !address || !phone) {
+                showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+                return;
+            }
+
+            try {
+                const customerRef = window.dbRef(window.db, `customers/${currentEditCustomerId}`);
+                await window.dbSet(customerRef, { name, address, phone });
+                
+                closeEditCustomerModal();
+                showToast('แก้ไขข้อมูลลูกค้าเรียบร้อยแล้ว', 'success');
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        async function loadCustomers() {
+            try {
+                const customersRef = window.dbRef(window.db, 'customers');
+                window.dbOnValue(customersRef, (snapshot) => {
+                    customers = snapshot.val() || {};
+                    displayCustomers();
+                });
+            } catch (error) {
+                console.error('Error loading customers:', error);
+            }
+        }
+
+        function displayCustomers() {
+            const customersTable = document.getElementById('customers-table');
+            const searchTerm = document.getElementById('customer-search').value.toLowerCase();
+        
+            // Filtered array
+            const filtered = Object.entries(customers).filter(([id, customer]) =>
+                searchTerm === '' ||
+                customer.name.toLowerCase().includes(searchTerm) ||
+                customer.address.toLowerCase().includes(searchTerm) ||
+                customer.phone.includes(searchTerm)
+            );
+        
+            // Pagination
+            const startIdx = (currentPage - 1) * pageSize;
+            const pageItems = filtered.slice(startIdx, startIdx + pageSize);
+        
+            customersTable.innerHTML = '';
+            pageItems.forEach(([id, customer]) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-4 md:px-6 py-4 whitespace-nowrap text-lg font-medium text-white">${customer.name}</td>
+                    <td class="px-4 md:px-6 py-4 text-lg text-gray-300">
+                        <div class="text-ellipsis max-w-xs">${customer.address}</div>
+                    </td>
+                    <td class="px-4 md:px-6 py-4 whitespace-nowrap text-lg text-gray-300">${customer.phone}</td>
+                    <td class="px-4 md:px-6 py-4 whitespace-nowrap text-lg font-medium">
+                        <div class="flex gap-2">
+                            <button onclick="openEditCustomerModal('${id}')" class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-base transition-colors">
+                                แก้ไข
+                            </button>
+                            <button onclick="showConfirmation('ต้องการลบลูกค้า ${customer.name} หรือไม่?', () => deleteCustomerConfirmed('${id}'))" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-base transition-colors">
+                                ลบ
+                            </button>
+                        </div>
+                    </td>
+                `;
+                customersTable.appendChild(row);
+            });
+        
+            renderPagination({
+                containerId: 'customers-pagination',
+                totalItems: filtered.length,
+                currentPage: currentPage,
+                pageSize: pageSize,
+                onPageChange: (page) => {
+                    currentPage = page;
+                    displayCustomers();
+                }
+            });
+        }
+        
+        function searchCustomers() {
+            displayCustomers();
+        }
+
+        async function deleteCustomerConfirmed(id) {
+            try {
+                const customerRef = window.dbRef(window.db, `customers/${id}`);
+                await window.dbRemove(customerRef);
+                showToast('ลบลูกค้าเรียบร้อยแล้ว', 'success');
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        // Bank Management
+        function openAddBankModal() {
+            document.getElementById('add-bank-modal').classList.remove('hidden');
+            document.getElementById('add-bank-modal').classList.add('flex');
+            document.getElementById('modal-bank-name').focus();
+        }
+
+        function closeAddBankModal() {
+            document.getElementById('add-bank-modal').classList.add('hidden');
+            document.getElementById('add-bank-modal').classList.remove('flex');
+            document.getElementById('modal-bank-name').value = '';
+            document.getElementById('modal-bank-account').value = '';
+            document.getElementById('modal-bank-holder').value = '';
+        }
+
+        async function addBank() {
+            const name = document.getElementById('modal-bank-name').value.trim();
+            const account = document.getElementById('modal-bank-account').value.trim();
+            const holder = document.getElementById('modal-bank-holder').value.trim();
+
+            if (!name || !account || !holder) {
+                showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+                return;
+            }
+
+            try {
+                const banksRef = window.dbRef(window.db, 'banks');
+                await window.dbPush(banksRef, { name, account, holder });
+                
+                closeAddBankModal();
+                showToast('เพิ่มธนาคารเรียบร้อยแล้ว', 'success');
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        function openEditBankModal(id) {
+            currentEditBankId = id;
+            const bank = banks[id];
+            
+            document.getElementById('edit-bank-name').value = bank.name;
+            document.getElementById('edit-bank-account').value = bank.account;
+            document.getElementById('edit-bank-holder').value = bank.holder;
+            
+            document.getElementById('edit-bank-modal').classList.remove('hidden');
+            document.getElementById('edit-bank-modal').classList.add('flex');
+        }
+
+        function closeEditBankModal() {
+            document.getElementById('edit-bank-modal').classList.add('hidden');
+            document.getElementById('edit-bank-modal').classList.remove('flex');
+            currentEditBankId = null;
+        }
+
+        async function updateBank() {
+            if (!currentEditBankId) return;
+            
+            const name = document.getElementById('edit-bank-name').value.trim();
+            const account = document.getElementById('edit-bank-account').value.trim();
+            const holder = document.getElementById('edit-bank-holder').value.trim();
+
+            if (!name || !account || !holder) {
+                showToast('กรุณากรอกข้อมูลให้ครบถ้วน', 'error');
+                return;
+            }
+
+            try {
+                const bankRef = window.dbRef(window.db, `banks/${currentEditBankId}`);
+                await window.dbSet(bankRef, { name, account, holder });
+                
+                closeEditBankModal();
+                showToast('แก้ไขข้อมูลธนาคารเรียบร้อยแล้ว', 'success');
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        async function loadBanks() {
+            try {
+                const banksRef = window.dbRef(window.db, 'banks');
+                window.dbOnValue(banksRef, (snapshot) => {
+                    banks = snapshot.val() || {};
+                    displayBanks();
+                });
+            } catch (error) {
+                console.error('Error loading banks:', error);
+            }
+        }
+
+        function displayBanks() {
+            const banksTable = document.getElementById('banks-table');
+            const searchTerm = document.getElementById('bank-search').value.toLowerCase();
+            
+            banksTable.innerHTML = '';
+            
+            Object.entries(banks).forEach(([id, bank]) => {
+                if (searchTerm === '' || 
+                    bank.name.toLowerCase().includes(searchTerm) ||
+                    bank.account.includes(searchTerm) ||
+                    bank.holder.toLowerCase().includes(searchTerm)) {
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="px-4 md:px-6 py-4 whitespace-nowrap text-lg font-medium text-white">${bank.name}</td>
+                        <td class="px-4 md:px-6 py-4 whitespace-nowrap text-lg text-gray-300">${bank.account}</td>
+                        <td class="px-4 md:px-6 py-4 whitespace-nowrap text-lg text-gray-300">${bank.holder}</td>
+                        <td class="px-4 md:px-6 py-4 whitespace-nowrap text-lg font-medium">
+                            <div class="flex gap-2">
+                                <button onclick="openEditBankModal('${id}')" class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-base transition-colors">
+                                    แก้ไข
+                                </button>
+                                <button onclick="showConfirmation('ต้องการลบธนาคาร ${bank.name} หรือไม่?', () => deleteBankConfirmed('${id}'))" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-base transition-colors">
+                                    ลบ
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    banksTable.appendChild(row);
+                }
+            });
+        }
+
+        function searchBanks() {
+            displayBanks();
+        }
+
+        async function deleteBankConfirmed(id) {
+            try {
+                const bankRef = window.dbRef(window.db, `banks/${id}`);
+                await window.dbRemove(bankRef);
+                showToast('ลบธนาคารเรียบร้อยแล้ว', 'success');
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        // Product Management
+        function openAddProductModal() {
+            document.getElementById('add-product-modal').classList.remove('hidden');
+            document.getElementById('add-product-modal').classList.add('flex');
+            document.getElementById('modal-product-name').focus();
+        }
+
+        function closeAddProductModal() {
+            document.getElementById('add-product-modal').classList.add('hidden');
+            document.getElementById('add-product-modal').classList.remove('flex');
+            document.getElementById('modal-product-name').value = '';
+            document.getElementById('modal-product-price').value = '';
+        }
+
+        async function addProduct() {
+            const name = document.getElementById('modal-product-name').value.trim();
+            const price = parseFloat(document.getElementById('modal-product-price').value);
+
+            if (!name || !price || price <= 0) {
+                showToast('กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง', 'error');
+                return;
+            }
+
+            try {
+                const productsRef = window.dbRef(window.db, 'products');
+                await window.dbPush(productsRef, { name, price });
+                
+                closeAddProductModal();
+                showToast('เพิ่มสินค้าเรียบร้อยแล้ว', 'success');
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        function openEditProductModal(id) {
+            currentEditProductId = id;
+            const product = products[id];
+            
+            document.getElementById('edit-product-name').value = product.name;
+            document.getElementById('edit-product-price').value = product.price;
+            
+            document.getElementById('edit-product-modal').classList.remove('hidden');
+            document.getElementById('edit-product-modal').classList.add('flex');
+        }
+
+        function closeEditProductModal() {
+            document.getElementById('edit-product-modal').classList.add('hidden');
+            document.getElementById('edit-product-modal').classList.remove('flex');
+            currentEditProductId = null;
+        }
+
+        async function updateProduct() {
+            if (!currentEditProductId) return;
+            
+            const name = document.getElementById('edit-product-name').value.trim();
+            const price = parseFloat(document.getElementById('edit-product-price').value);
+
+            if (!name || !price || price <= 0) {
+                showToast('กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง', 'error');
+                return;
+            }
+
+            try {
+                const productRef = window.dbRef(window.db, `products/${currentEditProductId}`);
+                await window.dbSet(productRef, { name, price });
+                
+                closeEditProductModal();
+                showToast('แก้ไขข้อมูลสินค้าเรียบร้อยแล้ว', 'success');
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        async function loadProducts() {
+            try {
+                const productsRef = window.dbRef(window.db, 'products');
+                window.dbOnValue(productsRef, (snapshot) => {
+                    products = snapshot.val() || {};
+                    displayProducts();
+                });
+            } catch (error) {
+                console.error('Error loading products:', error);
+            }
+        }
+
+        function displayProducts(sortBy = 'name', sortOrder = 'asc') {
+            const productsTable = document.getElementById('products-table');
+            const searchTerm = document.getElementById('product-search').value.toLowerCase();
+        
+            // Filter & Sort
+            let filteredProducts = Object.entries(products).filter(([id, product]) => {
+                return searchTerm === '' ||
+                    product.name.toLowerCase().includes(searchTerm) ||
+                    product.price.toString().includes(searchTerm);
+            });
+        
+            filteredProducts.sort(([, a], [, b]) => {
+                let valueA = a[sortBy];
+                let valueB = b[sortBy];
+                if (typeof valueA === 'string') {
+                    valueA = valueA.toLowerCase();
+                    valueB = valueB.toLowerCase();
+                }
+                if (sortOrder === 'asc') {
+                    return valueA > valueB ? 1 : -1;
+                } else {
+                    return valueA < valueB ? 1 : -1;
+                }
+            });
+        
+            // Pagination
+            const startIdx = (currentPage - 1) * pageSize;
+            const pageItems = filteredProducts.slice(startIdx, startIdx + pageSize);
+        
+            productsTable.innerHTML = '';
+            pageItems.forEach(([id, product]) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-4 md:px-6 py-4 whitespace-nowrap text-lg font-medium text-white">${product.name}</td>
+                    <td class="px-4 md:px-6 py-4 whitespace-nowrap text-lg text-gray-300">${formatNumber(product.price)} บาท</td>
+                    <td class="px-4 md:px-6 py-4 whitespace-nowrap text-lg font-medium">
+                        <div class="flex gap-2">
+                            <button onclick="openEditProductModal('${id}')" class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-base transition-colors">
+                                แก้ไข
+                            </button>
+                            <button onclick="showConfirmation('ต้องการลบสินค้า ${product.name} หรือไม่?', () => deleteProductConfirmed('${id}'))" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-base transition-colors">
+                                ลบ
+                            </button>
+                        </div>
+                    </td>
+                `;
+                productsTable.appendChild(row);
+            });
+        
+            // เรียกใช้ renderPagination
+            renderPagination({
+                containerId: 'products-pagination',
+                totalItems: filteredProducts.length,
+                currentPage: currentPage,
+                pageSize: pageSize,
+                onPageChange: (page) => {
+                    currentPage = page;
+                    displayProducts(sortBy, sortOrder);
+                }
+            });
+        }
+
+        function searchProducts() {
+            displayProducts();
+        }
+
+        async function deleteProductConfirmed(id) {
+            try {
+                const productRef = window.dbRef(window.db, `products/${id}`);
+                await window.dbRemove(productRef);
+                showToast('ลบสินค้าเรียบร้อยแล้ว', 'success');
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        // Sales Management
+        function loadCustomersForSale() {
+            const select = document.getElementById('sale-customer');
+            select.innerHTML = '<option value="">เลือกลูกค้า</option>';
+            
+            Object.entries(customers).forEach(([id, customer]) => {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = customer.name;
+                select.appendChild(option);
+            });
+        }
+
+        function loadProductsForBox(sortBy = 'name', sortOrder = 'asc') {
+            const boxProducts = document.getElementById('box-products');
+            boxProducts.innerHTML = '';
+
+            // แปลง Object เป็น Array เพื่อให้สามารถ sort ได้
+            let sortedProducts = Object.entries(products);
+
+            // เรียงลำดับตาม sortBy และ sortOrder
+            sortedProducts.sort(([, a], [, b]) => {
+                let valueA = a[sortBy];
+                let valueB = b[sortBy];
+
+                if (typeof valueA === 'string') {
+                    valueA = valueA.toLowerCase();
+                    valueB = valueB.toLowerCase();
+                }
+
+                if (sortOrder === 'asc') {
+                    return valueA > valueB ? 1 : -1;
+                } else {
+                    return valueA < valueB ? 1 : -1;
+                }
+            });
+
+            // แสดงผล
+            sortedProducts.forEach(([id, product]) => {
+                const productDiv = document.createElement('div');
+                productDiv.className = 'grid grid-cols-12 gap-3 items-center';
+                productDiv.innerHTML = `
+                    <span class="col-span-5 text-lg">${product.name}</span>
+                    <input type="number" id="product-${id}" placeholder="จำนวน" min="0" value="0" class="col-span-3 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-lg focus:outline-none focus:border-blue-500 text-center">
+                    <span class="col-span-4 text-lg text-gray-400 text-right">${formatNumber(product.price)} บาท</span>
+                `;
+                boxProducts.appendChild(productDiv);
+            });
+        }
+
+        function addBoxToOrder() {
+            const boxCount = parseInt(document.getElementById('box-count').value) || 1;
+            const boxProducts = {};
+            let hasProducts = false;
+            let boxTotal = 0;
+
+            // Collect products for this box
+            Object.entries(products).forEach(([id, product]) => {
+                const quantity = parseInt(document.getElementById(`product-${id}`).value) || 0;
+                if (quantity > 0) {
+                    boxProducts[id] = {
+                        name: product.name,
+                        price: product.price,
+                        quantity: quantity
+                    };
+                    boxTotal += product.price * quantity;
+                    hasProducts = true;
+                }
+            });
+
+            if (!hasProducts) {
+                showToast('กรุณาเลือกสินค้าอย่างน้อย 1 รายการ', 'error');
+                return;
+            }
+
+            if (boxCount <= 0) {
+                showToast('กรุณาระบุจำนวนกล่องที่ถูกต้อง', 'error');
+                return;
+            }
+
+            // Add box to order
+            const boxId = Date.now().toString();
+            currentOrder.push({
+                boxId,
+                boxCount,
+                products: boxProducts,
+                boxTotal,
+                totalPrice: boxTotal * boxCount
+            });
+
+            // Reset form
+            Object.keys(products).forEach(id => {
+                document.getElementById(`product-${id}`).value = '0';
+            });
+            document.getElementById('box-count').value = '1';
+
+            calculateShippingCost();
+            displayCurrentOrder();
+        }
+
+        function displayCurrentOrder() {
+            const orderDiv = document.getElementById('current-order');
+            const subtotalDiv = document.getElementById('subtotal-amount');
+            const shippingDiv = document.getElementById('shipping-amount');
+            const totalDiv = document.getElementById('total-amount');
+            
+            orderDiv.innerHTML = '';
+            let subtotal = 0;
+
+            currentOrder.forEach((box, index) => {
+                subtotal += box.totalPrice;
+
+                const boxDiv = document.createElement('div');
+                boxDiv.className = 'bg-gray-700 p-4 rounded-lg';
+                
+                const productsHtml = Object.values(box.products).map(product => 
+                    `<div class="text-lg text-gray-300">${product.name} x${formatNumber(product.quantity)} (${formatNumber(product.price)} บาท)</div>`
+                ).join('');
+
+                boxDiv.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <div class="font-medium text-lg">รายการที่ ${index + 1}</div>
+                            <div class="text-lg text-gray-400">จำนวน ${formatNumber(box.boxCount)} กล่อง</div>
+                        </div>
+                        <button onclick="removeBoxFromOrder(${index})" class="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs transition-colors">
+                            ลบ
+                        </button>
+                    </div>
+                    <div class="mb-2">
+                        ${productsHtml}
+                    </div>
+                    <div class="text-right">
+                        <div class="text-lg text-gray-400">${formatNumber(box.boxTotal)} บาท x ${formatNumber(box.boxCount)}</div>
+                        <div class="font-semibold text-lg text-green-400">${formatNumber(box.totalPrice)} บาท</div>
+                    </div>
+                `;
+                orderDiv.appendChild(boxDiv);
+            });
+
+            const grandTotal = subtotal + currentShippingCost;
+            
+            subtotalDiv.textContent = `${formatNumber(subtotal)} บาท`;
+            shippingDiv.textContent = `${formatNumber(currentShippingCost)} บาท`;
+            totalDiv.textContent = `${formatNumber(grandTotal)} บาท`;
+        }
+
+        function removeBoxFromOrder(index) {
+            currentOrder.splice(index, 1);
+            calculateShippingCost();
+            displayCurrentOrder();
+            showToast('ลบรายการจากคำสั่งซื้อแล้ว', 'info');
+        }
+
+        function clearOrderConfirmed() {
+            currentOrder = [];
+            currentShippingCost = 0;
+            displayCurrentOrder();
+            showToast('ล้างคำสั่งซื้อแล้ว', 'info');
+        }
+
+        async function saveBill() {
+            const customerId = document.getElementById('sale-customer').value;
+            const shippingOption = document.getElementById('shipping-option').value;
+            
+            if (!customerId) {
+                showToast('กรุณาเลือกลูกค้าก่อนบันทึกบิล', 'error');
+                return;
+            }
+
+            if (!shippingOption) {
+                showToast('กรุณาเลือกค่าจัดส่งก่อนบันทึกบิล', 'error');
+                return;
+            }
+
+            if (currentOrder.length === 0) {
+                showToast('ไม่มีสินค้าในคำสั่งซื้อ', 'error');
+                return;
+            }
+
+            const customer = customers[customerId];
+            const orderNumber = Date.now().toString();
+            const now = new Date();
+            
+            let subtotal = 0;
+            currentOrder.forEach(box => {
+                subtotal += box.totalPrice;
+            });
+
+            let totalBoxes = 0;
+            currentOrder.forEach(box => {
+                totalBoxes += box.boxCount;
+            });
+            
+            const total = subtotal + currentShippingCost;
+            const shippingOptionValue = document.getElementById('shipping-option').value;
+
+            // Create a copy of current order to avoid reference issues
+            const saleData = {
+                orderNumber,
+                customerId,
+                customerName: customer.name,
+                boxes: JSON.parse(JSON.stringify(currentOrder)), // Deep copy
+                subtotal,
+                shippingCost: currentShippingCost,
+                shippingOption: shippingOptionValue,
+                total,
+                totalBoxes,
+                date: now.toISOString(),
+                timestamp: now.getTime(),
+                paymentStatus: 'unpaid' // Default status
+            };
+
+            try {
+                // Save to database
+                const salesRef = window.dbRef(window.db, 'sales');
+                await window.dbPush(salesRef, saleData);
+                
+                // Clear order after successful save
+                currentOrder = [];
+                currentShippingCost = 0;
+                displayCurrentOrder();
+                
+                // Reset form
+                document.getElementById('sale-customer').value = '';
+                document.getElementById('shipping-option').value = '';
+                document.getElementById('custom-shipping').classList.add('hidden');
+                document.getElementById('custom-shipping-cost').value = '';
+                
+                showToast('บันทึกการขายเรียบร้อยแล้ว', 'success');
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+
+
+        function generateBillHTML(saleData, customer) {
+            const billContent = document.getElementById('bill-content');
+            const date = new Date(saleData.date);
+            
+            let totalBoxes = 0;
+            let itemsHtml = '';
+            let itemNumber = 1;
+            
+            saleData.boxes.forEach((box, boxIndex) => {
+                totalBoxes += box.boxCount;
+                
+                // Add products in this box
+                const productEntries = Object.values(box.products);
+                productEntries.forEach((product, productIndex) => {
+                    if (productIndex === 0) {
+                        // First product shows the item number with rowspan
+                        itemsHtml += `
+                            <tr style="page-break-inside: avoid;">
+                                <td class="text-center" rowspan="${productEntries.length + 1}" style="vertical-align: middle; font-weight: bold; padding: 4px; border: 1px solid #333; background: #f5f5f5; font-size: 13px;">${itemNumber}</td>
+                                <td class="text-left" style="padding: 4px; border: 1px solid #333; font-size: 13px;">${product.name}</td>
+                                <td class="text-center" style="padding: 4px; border: 1px solid #333; font-size: 13px;">${formatNumber(product.quantity)}</td>
+                                <td class="text-right" style="padding: 4px; border: 1px solid #333; font-size: 13px;">${formatNumber(product.price)}</td>
+                                <td class="text-right" style="padding: 4px; border: 1px solid #333; font-size: 13px;">${formatNumber(product.price * product.quantity)}</td>
+                            </tr>
+                        `;
+                    } else {
+                        // Subsequent products don't show item number
+                        itemsHtml += `
+                            <tr style="page-break-inside: avoid;">
+                                <td class="text-left" style="padding: 4px; border: 1px solid #333; font-size: 13px;">${product.name}</td>
+                                <td class="text-center" style="padding: 4px; border: 1px solid #333; font-size: 13px;">${formatNumber(product.quantity)}</td>
+                                <td class="text-right" style="padding: 4px; border: 1px solid #333; font-size: 13px;">${formatNumber(product.price)}</td>
+                                <td class="text-right" style="padding: 4px; border: 1px solid #333; font-size: 13px;">${formatNumber(product.price * product.quantity)}</td>
+                            </tr>
+                        `;
+                    }
+                });
+                
+                // Add box summary row
+                itemsHtml += `
+                    <tr style="page-break-inside: avoid; background: #f9f9f9;">
+                        <td class="text-left" style="font-weight: bold; padding: 4px; border: 1px solid #333; font-size: 13px;">จำนวนกล่อง</td>
+                        <td class="text-center" style="font-weight: bold; padding: 4px; border: 1px solid #333; font-size: 13px;">${formatNumber(box.boxCount)}</td>
+                        <td class="text-center" style="padding: 4px; border: 1px solid #333; font-size: 13px;">—</td>
+                        <td class="text-right" style="font-weight: bold; padding: 4px; border: 1px solid #333; font-size: 13px;">${formatNumber(box.totalPrice)} บาท</td>
+                    </tr>
+                `;
+                itemNumber++;
+            });
+            
+            billContent.innerHTML = `
+                <div style="background: white; color: black; padding: 0px; font-family: 'Kanit', sans-serif;">
+                    <div class="bill-header" style="text-align: center; margin-bottom: 20px; margin-top: 15px; border-bottom: 2px solid #333; padding-bottom: 15px;">
+                        <div class="bill-title" style="font-size: 24px; font-weight: bold; color: #000; margin-bottom: 8px;">
+                            ${saleData.paymentStatus === 'paid' ? 'ใบเสร็จรับเงิน' : 'ใบส่งของ'}
+                        </div>
+                        <div class="bill-subtitle" style="font-size: 14px; color: #333; margin-bottom: 4px;">${date.toLocaleDateString('th-TH', { 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                        })} เวลา ${date.toLocaleTimeString('th-TH', { 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        })}</div>
+                        <!-- <div class="bill-subtitle" style="font-size: 13px; color: #666;">เลขที่คำสั่งซื้อ ${saleData.orderNumber} </div> -->
+                    </div>
+                    
+                    <div class="bill-info" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                        <div class="company-info" style="padding: 12px; border: 1px solid #ddd; border-radius: 4px; background: #f8f8f8; order: 1;">
+                            <div class="info-title" style="font-size: 13px; font-weight: bold; color: #000; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #ccc;">ข้อมูลผู้ขาย</div>
+                            <div style="color: #333; margin-bottom: 3px; font-size: 12px;"><strong>ข้าวแต๋นน้ำแตงโมแม่บัวจันทร์</strong></div>
+                            <div style="color: #333; margin-bottom: 3px; font-size: 12px;">5 หมู่ 2 ตำบลบ้านเป้า อำเภอเมือง</div>
+                            <div style="color: #333; margin-bottom: 3px; font-size: 12px;">จังหวัดลำปาง 52100</div>
+                            <div style="color: #333; font-size: 12px;">เบอร์โทร: 084-574-8834</div>
+                        </div>
+                        <div class="customer-info" style="padding: 12px; border: 1px solid #ddd; border-radius: 4px; background: #f8f8f8; order: 2;">
+                            <div class="info-title" style="font-size: 13px; font-weight: bold; color: #000; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #ccc;">ที่อยู่ในการจัดส่งสินค้า</div>
+                            <div style="color: #333; margin-bottom: 3px; font-size: 12px;"><strong>${customer.name}</strong></div>
+                            <div style="color: #333; margin-bottom: 3px; font-size: 12px;">${customer.address}</div>
+                            <div style="color: #333; font-size: 12px;">เบอร์โทร: ${customer.phone}</div>
+                        </div>
+                    </div>
+                    
+                    <table class="bill-table" style="page-break-inside: auto; width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                        <thead style="display: table-header-group;">
+                            <tr>
+                                <th style="width: 10%; padding: 8px 4px; background: #f5f5f5; font-weight: bold; text-align: center; border: 1px solid #333; font-size: 13px;">รายการ</th>
+                                <th style="width: 40%; padding: 8px 4px; background: #f5f5f5; font-weight: bold; text-align: center; border: 1px solid #333; font-size: 13px;">รายละเอียดสินค้า</th>
+                                <th style="width: 15%; padding: 8px 4px; background: #f5f5f5; font-weight: bold; text-align: center; border: 1px solid #333; font-size: 13px;">จำนวน</th>
+                                <th style="width: 17.5%; padding: 8px 4px; background: #f5f5f5; font-weight: bold; text-align: center; border: 1px solid #333; font-size: 13px;">ราคา/หน่วย</th>
+                                <th style="width: 17.5%; padding: 8px 4px; background: #f5f5f5; font-weight: bold; text-align: center; border: 1px solid #333; font-size: 13px;">ราคารวม</th>
+                            </tr>
+                        </thead>
+                        <tbody style="page-break-inside: auto;">
+                            ${itemsHtml}
+                            <tr style="background: #f9f9f9;">
+                                <td colspan="4" style="text-align: right; font-weight: bold; padding: 8px 4px; border: 1px solid #333; font-size: 13px;">รวมราคาสินค้า</td>
+                                <td style="text-align: right; font-weight: bold; padding: 8px 4px; border: 1px solid #333; font-size: 13px;">${formatNumber(saleData.subtotal)} บาท</td>
+                            </tr>
+                            <tr style="background: #f9f9f9;">
+                                <td colspan="4" style="text-align: right; padding: 8px 4px; border: 1px solid #333; font-size: 13px;">รวมจำนวนกล่อง</td>
+                                <td style="text-align: right; padding: 8px 4px; border: 1px solid #333; font-size: 13px;">${formatNumber(saleData.totalBoxes)} กล่อง</td>
+                            </tr>
+                            <tr style="background: #f9f9f9;">
+                                <td colspan="4" style="text-align: right; padding: 8px 4px; border: 1px solid #333; font-size: 13px;">ค่าจัดส่ง</td>
+                                <td style="text-align: right; bold; padding: 8px 4px; border: 1px solid #333; font-size: 13px;">${formatNumber(saleData.shippingCost)} บาท</td>
+                            </tr>
+                            <tr class="total-row" style="background: #f0f0f0;">
+                                <td colspan="4" style="text-align: right; font-weight: bold; padding: 8px 4px; border: 1px solid #333; font-size: 14px;">รวมเป็นเงินทั้งสิ้น</td>
+                                <td style="text-align: right; font-weight: bold; font-size: 14px; padding: 8px 4px; border: 1px solid #333;">${formatNumber(saleData.total)} บาท</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    ${saleData.paymentStatus === 'paid' ? `
+                    <!-- Payment Information -->
+                    <div style="margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background: #fff;">
+                        <div style="font-size: 14px; font-weight: bold; color: #000; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #ccc;">
+                            ข้อมูลการชำระเงิน
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                            <div>
+                                <div style="color: #333; margin-bottom: 5px; font-size: 12px;"><strong>สถานะการชำระเงิน</strong></div>
+                                <div style="color: #16a34a; font-weight: bold; font-size: 12px;">
+                                    ชำระเงินแล้ว
+                                </div>
+                            </div>
+                            <div>
+                                <div style="color: #333; margin-bottom: 5px; font-size: 12px;"><strong>วิธีการชำระเงิน</strong></div>
+                                <div style="color: #333; font-size: 12px;">
+                                    ${saleData.paymentMethod === 'cash' ? 'เงินสด' : 
+                                    saleData.paymentMethod === 'transfer' ? `โอนผ่านธนาคาร${saleData.paymentBankName ? ' - ' + saleData.paymentBankName : ''}${saleData.paymentBankAccount ? ' - ' + saleData.paymentBankAccount : ''}` : 'ไม่ระบุ'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function closeBillModal() {
+            document.getElementById('bill-modal').classList.add('hidden');
+            document.getElementById('bill-modal').classList.remove('flex');
+        }
+
+        // Payment Management
+        function openPaymentModal(saleId) {
+            currentPaymentSaleId = saleId;
+            loadBanksForPayment();
+            document.getElementById('payment-modal').classList.remove('hidden');
+            document.getElementById('payment-modal').classList.add('flex');
+        }
+
+        function closePaymentModal() {
+            document.getElementById('payment-modal').classList.add('hidden');
+            document.getElementById('payment-modal').classList.remove('flex');
+            document.getElementById('payment-method').value = '';
+            document.getElementById('payment-bank').value = '';
+            document.getElementById('bank-selection').classList.add('hidden');
+            currentPaymentSaleId = null;
+        }
+
+        function toggleBankSelection() {
+            const paymentMethod = document.getElementById('payment-method').value;
+            const bankSelection = document.getElementById('bank-selection');
+            
+            if (paymentMethod === 'transfer') {
+                bankSelection.classList.remove('hidden');
+            } else {
+                bankSelection.classList.add('hidden');
+            }
+        }
+
+        function loadBanksForPayment() {
+            const select = document.getElementById('payment-bank');
+            select.innerHTML = '<option value="">เลือกธนาคาร</option>';
+            
+            Object.entries(banks).forEach(([id, bank]) => {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = `${bank.name} - ${bank.account}`;
+                select.appendChild(option);
+            });
+        }
+
+        async function confirmPayment() {
+            if (!currentPaymentSaleId) return;
+            
+            const paymentMethod = document.getElementById('payment-method').value;
+            const bankId = document.getElementById('payment-bank').value;
+            
+            if (!paymentMethod) {
+                showToast('กรุณาเลือกวิธีการชำระเงิน', 'error');
+                return;
+            }
+            
+            if (paymentMethod === 'transfer' && !bankId) {
+                showToast('กรุณาเลือกธนาคาร', 'error');
+                return;
+            }
+            
+            try {
+                const saleRef = window.dbRef(window.db, `sales/${currentPaymentSaleId}`);
+                const currentSale = salesHistory[currentPaymentSaleId];
+                
+                const paymentData = {
+                    paymentStatus: 'paid',
+                    paymentMethod: paymentMethod,
+                    paymentDate: new Date().toISOString()
+                };
+                
+                if (paymentMethod === 'transfer' && bankId) {
+                    paymentData.paymentBankId = bankId;
+                    paymentData.paymentBankName = banks[bankId].name;
+                    paymentData.paymentBankAccount = banks[bankId].account;
+                    paymentData.paymentBankHolder = banks[bankId].holder;
+                }
+                
+                const updatedSale = { ...currentSale, ...paymentData };
+                await window.dbSet(saleRef, updatedSale);
+                
+                closePaymentModal();
+                showToast('บันทึกการชำระเงินเรียบร้อยแล้ว', 'success');
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        // Sales History
+        async function loadSalesHistory() {
+            try {
+                const salesRef = window.dbRef(window.db, 'sales');
+                window.dbOnValue(salesRef, (snapshot) => {
+                    salesHistory = snapshot.val() || {};
+                    displaySalesHistory();
+                });
+            } catch (error) {
+                console.error('Error loading sales history:', error);
+            }
+        }
+
+        function displaySalesHistory() {
+            const historyTable = document.getElementById('sales-history-table');
+            const searchTerm = document.getElementById('history-search').value.toLowerCase();
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            const statusFilter = document.getElementById('history-status-filter').value;
+        
+            const sortedSales = Object.entries(salesHistory).sort((a, b) => b[1].timestamp - a[1].timestamp);
+            const filteredSales = sortedSales.filter(([id, sale]) => {
+                const date = new Date(sale.date);
+                let dateMatch = true;
+                if (startDate || endDate) {
+                    const saleDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                    if (startDate) {
+                        const filterStartDate = new Date(startDate);
+                        filterStartDate.setHours(0, 0, 0, 0);
+                        if (saleDate < filterStartDate) dateMatch = false;
+                    }
+                    if (endDate && dateMatch) {
+                        const filterEndDate = new Date(endDate);
+                        filterEndDate.setHours(23, 59, 59, 999);
+                        if (saleDate > filterEndDate) dateMatch = false;
+                    }
+                }
+                let statusMatch = true;
+                if (statusFilter) statusMatch = sale.paymentStatus === statusFilter;
+                const textMatch = searchTerm === '' ||
+                    sale.orderNumber.toLowerCase().includes(searchTerm) ||
+                    sale.customerName.toLowerCase().includes(searchTerm);
+                return dateMatch && statusMatch && textMatch;
+            });
+        
+            const startIdx = (currentPage - 1) * pageSize;
+            const pageItems = filteredSales.slice(startIdx, startIdx + pageSize);
+        
+            historyTable.innerHTML = '';
+            pageItems.forEach(([id, sale]) => {
+                const date = new Date(sale.date);
+                const dateString = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth()+1).padStart(2, '0')}/${date.getFullYear()}`;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-4 md:px-6 py-4 whitespace-nowrap text-lg font-medium text-white">${sale.customerName}</td>
+                    <td class="px-4 md:px-6 py-4 whitespace-nowrap text-lg text-gray-300">${dateString}</td>
+                    <td class="px-4 md:px-6 py-4 whitespace-nowrap text-lg text-green-400 font-semibold">${formatNumber(sale.total || sale.subtotal || 0)} บาท</td>
+                    <td class="px-4 md:px-6 py-4 whitespace-nowrap text-lg">
+                        ${sale.paymentStatus === 'paid' ? 
+                            `<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                ชำระเงินแล้ว
+                            </span>` : 
+                            `<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                                ยังไม่ชำระเงิน
+                            </span>`
+                        }
+                    </td>
+                    <td class="px-4 md:px-6 py-4 whitespace-nowrap text-lg font-medium">
+                        <div class="flex gap-2">
+                            <button onclick="viewBill('${id}')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-base transition-colors">
+                                ดูบิล
+                            </button>
+                            ${sale.paymentStatus !== 'paid' ? 
+                                `<button onclick="openPaymentModal('${id}')" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-base transition-colors">
+                                    ชำระเงิน
+                                </button>` : ''
+                            }
+                            <button onclick="showConfirmation('ต้องการลบรายการขายนี้หรือไม่?', () => deleteSaleConfirmed('${id}'))" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-base transition-colors">
+                                ลบ
+                            </button>
+                        </div>
+                    </td>
+                `;
+                historyTable.appendChild(row);
+            });
+        
+            renderPagination({
+                containerId: 'sales-history-pagination',
+                totalItems: filteredSales.length,
+                currentPage: currentPage,
+                pageSize: pageSize,
+                onPageChange: (page) => {
+                    currentPage = page;
+                    displaySalesHistory();
+                }
+            });
+        }
+
+        function searchSalesHistory() {
+            displaySalesHistory();
+        }
+
+        // Date Filter Functions
+        function toggleDateFilter() {
+            const panel = document.getElementById('date-filter-panel');
+            if (panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+            } else {
+                panel.classList.add('hidden');
+            }
+        }
+
+        function clearDateFilter() {
+            document.getElementById('start-date').value = '';
+            document.getElementById('end-date').value = '';
+            searchSalesHistory();
+        }
+
+        function setQuickDateFilter(period) {
+            const now = new Date();
+            const startDateInput = document.getElementById('start-date');
+            const endDateInput = document.getElementById('end-date');
+            
+            let startDate, endDate;
+            
+            switch (period) {
+                case 'today':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()+ 1);
+                    endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+                    break;
+                case 'month':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 2);
+                    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+                    break;
+                case 'year':
+                    startDate = new Date(now.getFullYear(), 0, 2);
+                    endDate = new Date(now.getFullYear() + 1, 0, 1);
+                    break;
+            }
+            
+            // Format dates for input fields (YYYY-MM-DD)
+            startDateInput.value = startDate.toISOString().split('T')[0];
+            endDateInput.value = endDate.toISOString().split('T')[0];
+            
+            searchSalesHistory();
+        }
+
+        function viewBill(saleId) {
+            const sale = salesHistory[saleId];
+            const customer = customers[sale.customerId];
+            
+            // Handle legacy data without shipping information
+            if (!sale.hasOwnProperty('subtotal')) {
+                sale.subtotal = sale.total || 0;
+                sale.shippingCost = 0;
+                sale.total = sale.subtotal;
+            }
+            
+            generateBillHTML(sale, customer);
+            document.getElementById('bill-modal').classList.remove('hidden');
+            document.getElementById('bill-modal').classList.add('flex');
+        }
+
+        async function deleteSaleConfirmed(saleId) {
+            try {
+                const saleRef = window.dbRef(window.db, `sales/${saleId}`);
+                await window.dbRemove(saleRef);
+                showToast('ลบรายการขายเรียบร้อยแล้ว', 'success');
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        // Update current time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleString('th-TH');
+        }
+
+        // Initialize
+        setInterval(updateTime, 1000);
+        updateTime();
+        showSection('history');
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) {
+                document.getElementById('mobile-overlay').classList.add('hidden');
+            }
+        });
+
+        let employees = {};
+        let currentEditEmployeeId = null;
+
+        // โหลดข้อมูลพนักงาน
+        async function loadEmployees() {
+            try {
+                const employeesRef = window.dbRef(window.db, 'employees');
+                window.dbOnValue(employeesRef, (snapshot) => {
+                    employees = snapshot.val() || {};
+                    displayEmployees();
+                });
+            } catch (error) {
+                console.error('Error loading employees:', error);
+            }
+        }
+
+        function displayEmployees() {
+            const employeesTable = document.getElementById('employees-table');
+            const searchTerm = document.getElementById('employee-search').value.toLowerCase();
+            employeesTable.innerHTML = '';
+            Object.entries(employees).forEach(([id, employee]) => {
+                if (searchTerm === '' ||
+                    employee.name.toLowerCase().includes(searchTerm) ||
+                    employee.rate.toString().includes(searchTerm)) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="px-4 md:px-6 py-4 whitespace-nowrap text-lg font-medium text-white">${employee.name}</td>
+                        <td class="px-4 md:px-6 py-4 whitespace-nowrap text-lg text-gray-300">${formatNumber(employee.rate)} บาท/ชม.</td>
+                        <td class="px-4 md:px-6 py-4 whitespace-nowrap text-lg font-medium">
+                            <div class="flex gap-2">
+                                <button onclick="openEditEmployeeModal('${id}')" class="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-base transition-colors">
+                                    แก้ไข
+                                </button>
+                                <button onclick="showConfirmation('ต้องการลบพนักงาน ${employee.name} หรือไม่?', () => deleteEmployeeConfirmed('${id}'))" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-base transition-colors">
+                                    ลบ
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    employeesTable.appendChild(row);
+                }
+            });
+        }
+
+        function searchEmployees() {
+            displayEmployees();
+        }
+
+        function openAddEmployeeModal() {
+            document.getElementById('add-employee-modal').classList.remove('hidden');
+            document.getElementById('add-employee-modal').classList.add('flex');
+            document.getElementById('modal-employee-name').focus();
+        }
+
+        function closeAddEmployeeModal() {
+            document.getElementById('add-employee-modal').classList.add('hidden');
+            document.getElementById('add-employee-modal').classList.remove('flex');
+            document.getElementById('modal-employee-name').value = '';
+            document.getElementById('modal-employee-rate').value = '';
+        }
+
+        async function addEmployee() {
+            const name = document.getElementById('modal-employee-name').value.trim();
+            const rate = parseFloat(document.getElementById('modal-employee-rate').value) || 0;
+            if (!name || rate <= 0) {
+                showToast('กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง', 'error');
+                return;
+            }
+            try {
+                const employeesRef = window.dbRef(window.db, 'employees');
+                await window.dbPush(employeesRef, { name, rate });
+                closeAddEmployeeModal();
+                showToast('เพิ่มพนักงานเรียบร้อยแล้ว', 'success');
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        function openEditEmployeeModal(id) {
+            currentEditEmployeeId = id;
+            const employee = employees[id];
+            document.getElementById('edit-employee-name').value = employee.name;
+            document.getElementById('edit-employee-rate').value = employee.rate;
+            document.getElementById('edit-employee-modal').classList.remove('hidden');
+            document.getElementById('edit-employee-modal').classList.add('flex');
+        }
+
+        function closeEditEmployeeModal() {
+            document.getElementById('edit-employee-modal').classList.add('hidden');
+            document.getElementById('edit-employee-modal').classList.remove('flex');
+            currentEditEmployeeId = null;
+        }
+
+        async function updateEmployee() {
+            if (!currentEditEmployeeId) return;
+            const name = document.getElementById('edit-employee-name').value.trim();
+            const rate = parseFloat(document.getElementById('edit-employee-rate').value) || 0;
+            if (!name || rate <= 0) {
+                showToast('กรุณากรอกข้อมูลให้ครบถ้วนและถูกต้อง', 'error');
+                return;
+            }
+            try {
+                const employeeRef = window.dbRef(window.db, `employees/${currentEditEmployeeId}`);
+                await window.dbSet(employeeRef, { name, rate });
+                closeEditEmployeeModal();
+                showToast('แก้ไขข้อมูลพนักงานเรียบร้อยแล้ว', 'success');
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        async function deleteEmployeeConfirmed(id) {
+            try {
+                const employeeRef = window.dbRef(window.db, `employees/${id}`);
+                await window.dbRemove(employeeRef);
+                showToast('ลบพนักงานเรียบร้อยแล้ว', 'success');
+            } catch (error) {
+                showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+            }
+        }
+
+        // Payroll Sidebar Toggle
+        function togglePayrollManagement() {
+            const submenu = document.getElementById('payroll-management-submenu');
+            const arrow = document.getElementById('payroll-management-arrow');
+            if (submenu.classList.contains('hidden')) {
+                submenu.classList.remove('hidden');
+                arrow.style.transform = 'rotate(90deg)';
+            } else {
+                submenu.classList.add('hidden');
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+
+         // ProductSearchTerm New Order
+        let boxProductSearchTerm = '';
+        function filterBoxProducts() {
+            boxProductSearchTerm = document.getElementById('box-product-search').value.toLowerCase();
+            loadProductsForBox();
+        }
+
+        function loadProductsForBox(sortBy = 'name', sortOrder = 'asc') {
+            const boxProducts = document.getElementById('box-products');
+            boxProducts.innerHTML = '';
+
+            let sortedProducts = Object.entries(products);
+
+            // เรียงลำดับตาม sortBy และ sortOrder
+            sortedProducts.sort(([, a], [, b]) => {
+                let valueA = a[sortBy];
+                let valueB = b[sortBy];
+
+                if (typeof valueA === 'string') {
+                    valueA = valueA.toLowerCase();
+                    valueB = valueB.toLowerCase();
+                }
+
+                if (sortOrder === 'asc') {
+                    return valueA > valueB ? 1 : -1;
+                } else {
+                    return valueA < valueB ? 1 : -1;
+                }
+            });
+
+            // กรองสินค้าตามคำค้นหา
+            sortedProducts = sortedProducts.filter(([id, product]) => {
+                return boxProductSearchTerm === '' ||
+                    product.name.toLowerCase().includes(boxProductSearchTerm) ||
+                    product.price.toString().includes(boxProductSearchTerm);
+            });
+
+            // แสดงผล
+            sortedProducts.forEach(([id, product]) => {
+                const productDiv = document.createElement('div');
+                productDiv.className = 'grid grid-cols-12 gap-3 items-center';
+                productDiv.innerHTML = `
+                    <span class="col-span-5 text-lg">${product.name}</span>
+                    <input type="number" id="product-${id}" placeholder="จำนวน" min="0" value="0" class="col-span-3 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-lg focus:outline-none focus:border-blue-500 text-center">
+                    <span class="col-span-4 text-lg text-gray-400 text-right">${formatNumber(product.price)} บาท</span>
+                `;
+                boxProducts.appendChild(productDiv);
+            });
+        }
+
+
+        let saleCustomerSearchTerm = '';
+        let customerDropdownOpen = false;
+
+        function toggleCustomerDropdown() {
+            const panel = document.getElementById('customer-dropdown-panel');
+            customerDropdownOpen = !customerDropdownOpen;
+            if (customerDropdownOpen) {
+                panel.classList.remove('hidden');
+                document.getElementById('sale-customer-search').value = '';
+                filterSaleCustomerDropdown();
+                setTimeout(() => {
+                    document.getElementById('sale-customer-search').focus();
+                }, 100);
+            } else {
+                panel.classList.add('hidden');
+            }
+        }
+
+        // ปิด dropdown เมื่อคลิกนอก panel
+        document.addEventListener('click', function(e) {
+            const panel = document.getElementById('customer-dropdown-panel');
+            const button = document.getElementById('open-customer-dropdown');
+            if (customerDropdownOpen && !panel.contains(e.target) && !button.contains(e.target)) {
+                panel.classList.add('hidden');
+                customerDropdownOpen = false;
+            }
+        });
+
+        function filterSaleCustomerDropdown() {
+            saleCustomerSearchTerm = document.getElementById('sale-customer-search').value.toLowerCase();
+            loadCustomersForDropdown();
+        }
+
+        function loadCustomersForDropdown() {
+            const list = document.getElementById('customer-dropdown-list');
+            list.innerHTML = '';
+
+            Object.entries(customers).forEach(([id, customer]) => {
+                if (
+                    saleCustomerSearchTerm === '' ||
+                    customer.name.toLowerCase().includes(saleCustomerSearchTerm) ||
+                    customer.phone.includes(saleCustomerSearchTerm) ||
+                    customer.address.toLowerCase().includes(saleCustomerSearchTerm)
+                ) {
+                    const item = document.createElement('div');
+                    item.className = 'px-4 py-3 hover:bg-gray-700 cursor-pointer text-white text-lg border-b border-gray-800';
+                    item.textContent = customer.name;
+                    item.onclick = function() {
+                        document.getElementById('sale-customer').value = id;
+                        document.getElementById('selected-customer-name').textContent = customer.name;
+                        document.getElementById('customer-dropdown-panel').classList.add('hidden');
+                        customerDropdownOpen = false;
+                    };
+                    list.appendChild(item);
+                }
+            });
+
+            // ถ้าไม่มีผลลัพธ์
+            if (list.innerHTML === '') {
+                const empty = document.createElement('div');
+                empty.className = 'px-4 py-3 text-gray-400 text-center';
+                empty.textContent = 'ไม่พบลูกค้า';
+                list.appendChild(empty);
+            }
+        }
+
+
+        // เพิ่มตัวแปรสำหรับกรองวันที่ในรายงาน
+        let reportStartDate = '';
+        let reportEndDate = '';
+
+        document.getElementById('report-start-date').addEventListener('change', function() {
+            reportStartDate = this.value;
+        });
+        document.getElementById('report-end-date').addEventListener('change', function() {
+            reportEndDate = this.value;
+        });
+
+        // ปุ่มล้างตัวกรองวันที่ในรายงาน
+        function clearReportDateFilter() {
+            document.getElementById('report-start-date').value = '';
+            document.getElementById('report-end-date').value = '';
+            reportStartDate = '';
+            reportEndDate = '';
+            generateReport('custom');
+        }
+
+        // ปุ่มเลือกช่วงวันที่ด่วนในรายงาน
+        function setQuickReportDateFilter(period) {
+            const now = new Date();
+            let startDate, endDate;
+            switch (period) {
+                case 'today':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate()+ 1);
+                    endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+                    break;
+                case 'month':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 2);
+                    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+                    break;
+                case 'year':
+                    startDate = new Date(now.getFullYear(), 0, 2);
+                    endDate = new Date(now.getFullYear() + 1, 0, 1);
+                    break;
+            }
+            document.getElementById('report-start-date').value = startDate.toISOString().split('T')[0];
+            document.getElementById('report-end-date').value = endDate.toISOString().split('T')[0];
+            reportStartDate = document.getElementById('report-start-date').value;
+            reportEndDate = document.getElementById('report-end-date').value;
+            generateReport('custom');
+        }
+
+        // ปรับ generateReport ให้รองรับช่วงวันที่และแยกตามประเภทการชำระเงิน
+        function generateReport(period) {
+            let filteredSales = [];
+            if (period === 'custom') {
+                let start = document.getElementById('report-start-date').value;
+                let end = document.getElementById('report-end-date').value;
+                if (start) {
+                    start = new Date(start);
+                    start.setHours(0, 0, 0, 0);
+                }
+                if (end) {
+                    end = new Date(end);
+                    end.setHours(23, 59, 59, 999);
+                }
+                filteredSales = Object.values(salesHistory).filter(sale => {
+                    const saleDate = new Date(sale.date);
+                    let match = true;
+                    if (start && saleDate < start) match = false;
+                    if (end && saleDate > end) match = false;
+                    return match;
+                });
+            } else {
+                const now = new Date();
+                let startDate, endDate;
+                switch (period) {
+                    case 'today':
+                        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+                        break;
+                    case 'month':
+                        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+                        break;
+                    case 'year':
+                        startDate = new Date(now.getFullYear(), 0, 1);
+                        endDate = new Date(now.getFullYear() + 1, 0, 1);
+                        break;
+                }
+                filteredSales = Object.values(salesHistory).filter(sale => {
+                    const saleDate = new Date(sale.date);
+                    return saleDate >= startDate && saleDate < endDate;
+                });
+            }
+        
+            // สรุปยอดขายตามประเภทการชำระเงิน
+            let totalCash = 0, totalTransfer = 0, totalUnpaid = 0;
+            let countCash = 0, countTransfer = 0, countUnpaid = 0;
+            filteredSales.forEach(sale => {
+                if (sale.paymentStatus === 'paid') {
+                    if (sale.paymentMethod === 'cash') {
+                        totalCash += sale.total;
+                        countCash++;
+                    } else if (sale.paymentMethod === 'transfer') {
+                        totalTransfer += sale.total;
+                        countTransfer++;
+                    }
+                } else {
+                    totalUnpaid += sale.total;
+                    countUnpaid++;
+                }
+            });
+        
+            // ลูกค้าและสินค้าขายดี (รวมทุกสถานะ)
+            const customerStats = {};
+            const productStats = {};
+            filteredSales.forEach(sale => {
+                if (!customerStats[sale.customerName]) {
+                    customerStats[sale.customerName] = { orders: 0, revenue: 0 };
+                }
+                customerStats[sale.customerName].orders++;
+                customerStats[sale.customerName].revenue += sale.total;
+            
+                if (sale.boxes) {
+                    sale.boxes.forEach(box => {
+                        Object.values(box.products).forEach(product => {
+                            if (!productStats[product.name]) {
+                                productStats[product.name] = { quantity: 0, revenue: 0 };
+                            }
+                            productStats[product.name].quantity += product.quantity * box.boxCount;
+                            productStats[product.name].revenue += product.price * product.quantity * box.boxCount;
+                        });
+                    });
+                }
+            });
+            displayTotalSalesSummary(filteredSales);
+            displayReportSummary(totalCash, countCash, totalTransfer, countTransfer, totalUnpaid, countUnpaid, customerStats, productStats);
+        }
+
+        // แสดงผลรายงานแบบใหม่
+        function displayReportSummary(totalCash, countCash, totalTransfer, countTransfer, totalUnpaid, countUnpaid, customerStats, productStats) {
+            const reportContent = document.getElementById('report-content');
+            reportContent.innerHTML = `
+                <div class="grid md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-gray-700 p-6 rounded-lg">
+                        <h4 class="font-semibold mb-2 text-white">เงินสด</h4>
+                        <p class="text-3xl font-bold text-green-400">${formatNumber(totalCash)} บาท</p>
+                        <p class="text-sm text-gray-400">จำนวนคำสั่งซื้อ ${formatNumber(countCash)}</p>
+                    </div>
+                    <div class="bg-gray-700 p-6 rounded-lg">
+                        <h4 class="font-semibold mb-2 text-white">โอนธนาคาร</h4>
+                        <p class="text-3xl font-bold text-blue-400">${formatNumber(totalTransfer)} บาท</p>
+                        <p class="text-sm text-gray-400">จำนวนคำสั่งซื้อ ${formatNumber(countTransfer)}</p>
+                    </div>
+                    <div class="bg-gray-700 p-6 rounded-lg">
+                        <h4 class="font-semibold mb-2 text-white">ยังไม่ชำระเงิน</h4>
+                        <p class="text-3xl font-bold text-red-400">${formatNumber(totalUnpaid)} บาท</p>
+                        <p class="text-sm text-gray-400">จำนวนคำสั่งซื้อ ${formatNumber(countUnpaid)}</p>
+                    </div>
+                </div>
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="bg-gray-700 p-6 rounded-lg">
+                        <h4 class="font-semibold mb-4 text-white">ลูกค้าอันดับต้น</h4>
+                        <div class="space-y-3">
+                            ${Object.entries(customerStats)
+                                .sort((a, b) => b[1].revenue - a[1].revenue)
+                                .slice(0, 5)
+                                .map(([name, stats]) => `
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-lg text-gray-300">${name}</span>
+                                        <span class="text-lg font-medium text-green-400">${formatNumber(stats.revenue)} บาท</span>
+                                    </div>
+                                `).join('')}
+                        </div>
+                    </div>
+                    <div class="bg-gray-700 p-6 rounded-lg">
+                        <h4 class="font-semibold mb-4 text-white">สินค้าขายดี</h4>
+                        <div class="space-y-3">
+                            ${Object.entries(productStats)
+                                .sort((a, b) => b[1].quantity - a[1].quantity)
+                                .slice(0, 5)
+                                .map(([name, stats]) => `
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-lg text-gray-300">${name}</span>
+                                        <span class="text-lg font-medium text-blue-400">${formatNumber(stats.quantity)} แพ็ค</span>
+                                    </div>
+                                `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayTotalSalesSummary(filteredSales) {
+            let total = 0;
+            let count = 0;
+            filteredSales.forEach(sale => {
+                total += sale.total;
+                count++;
+            });
+            document.getElementById('report-summary-total').innerHTML = `
+                <div class="bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg p-6 flex flex-col items-center shadow-lg">
+                    <div class="text-2xl font-bold text-white mb-2">สรุปยอดขายทั้งหมด</div>
+                    <div class="text-4xl font-extrabold text-white mb-1">${formatNumber(total)} บาท</div>
+                    <div class="text-lg text-white">จำนวนคำสั่งซื้อทั้งหมด ${formatNumber(count)} รายการ</div>
+                </div>
+            `;
+        }
+
+
+
+    </script>
+</body>
+</html>
